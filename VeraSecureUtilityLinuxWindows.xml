@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="VeraSecureUtilityLinuxWindows" mainModule="Main" version="2.0" logLevel="verbose" onError="continue">
+	<variable name="veraOwnerEmail" value="" description="Owner of the VERA file" />
+	<variable name="veraRecipientEmail" value="" description="recipient of the VERA file, put &apos;none&apos; without the quote if you wish to secure the file but not set any recipients. File without recipient will be secured and everyone will be required to request access to the file" />
+	<variable name="veraPermission" value="View Only" description="Permissions will look like this, we just need the english representation of the permission, the script will look up the long ID automatically. EX: Collaborate, Full LockDown, Track, View Only" />
+	<variable name="sourceFile" value="" description="file to secure, full path + file name, use / for Linux or \ for Windows in path" />
+	<variable name="targetFile" value="" description="location where to place the secured file, full path + file name use / for Linux or \ for Windows in path" />
+	<variable name="workingDir" value="/veragamft/" description="directory where the VeraExe and conf.json are located, must end with trailing slash, use / for Linux or \ for Windows in path. Default Windows: c:\veragamft\ Default Linux: /veragamft/" />
+	<variable name="veraExe" value="VeraSDKSample" description="executable to vera, default on Windows: VeraSdkSample.exe default on Linux: VeraSDKSample" />
+	<variable name="veraUtilityErrorMessage" value="error!" description="if during execution errors occur, the error message will be contained here, you can use this parameter to find out if a given VERA operation was successful. " />
+
+	<module name="Main">
+
+		<callModule label="call verifyInputParameters" module="verifyInputParameters" version="1.0" />
+
+
+		<setVariable label="initialize veraPolicies" name="veraPolicies" value="*" version="2.0" />
+
+
+		<callModule label="call module initializeVeraPolicies " module="initializeVeraPolicies" version="1.0" onError="abort" />
+
+
+		<setVariable label="initialize docId" name="docId" value="*" version="2.0" />
+
+
+		<setVariable label="initialize veraPolicyID" name="veraPolicyID" value="*" version="2.0" />
+
+
+		<setVariable label="outputFileFromExe" name="outputFileFromExe" value="${Concat(&apos;output&apos;,system.job.id,&apos;.txt&apos;)}" version="2.0" />
+
+
+		<print label="print outputFileFromExe" version="1.0">
+			<![CDATA[Output will be saved in: ${outputFileFromExe}]]>
+		</print>
+
+
+		<print label="print info for the job" version="1.0">
+			<![CDATA[1.veraRecipient = ${veraRecipientEmail}
+2.veraPermission = ${veraPermission}
+3.sourceFile= ${sourceFile} 
+4.encFILE = ${targetFile}
+5. veraOwnerEmail = ${veraOwnerEmail}]]>
+		</print>
+
+
+		<callModule label="call module lookUpVERAPolicy" module="lookUpVERAPolicy" version="1.0" />
+
+
+		<setVariable label="initialize isSecureCLICallOK" name="isSecureCLICallOK" value="${false}" version="2.0" />
+
+
+		<setVariable label="initialize OSplatform either windows or linux this project autodetects" name="OSplatform" value="windows" version="2.0" />
+
+
+		<setVariable label="initialize Linux doc-id parameter prefix" name="LinuxDocIDParameterPrefix" value="--doc-id:" version="2.0" />
+
+
+		<setVariable label="initialize Linux owner parameter prefix" name="LinuxOwnerParameterPrefix" value="--owner:" version="2.0" />
+
+
+		<exec label="VERAD SDK secure" executable="${veraExe}" executableDir="${workingDir}" workingDir="${workingDir}" spawn="false" redirectOutputTo="file" outputFile="${Concat(workingDir, outputFileFromExe)}" whenFileExists="overwrite" errorIfExecutableFails="true" version="1.0">
+			<arg value="secure" />
+			<arg value="${sourceFile}" />
+			<arg value="${targetFile}" />
+			<envvar name="LD_LIBRARY_PATH" value="${workingDir}" />
+		</exec>
+
+
+		<setVariable label="read output File" name="veraSecureOuptut" inputFile="${Concat(workingDir, outputFileFromExe)}" version="2.0" />
+
+
+		<print label="print output" version="1.0">
+			<![CDATA[------------------------------------------------------
+${veraSecureOuptut}]]>
+		</print>
+
+		<if label="if output contains DocId= for Windows" condition="${Contains(veraSecureOuptut, &apos;DocId=&apos;,false)}">
+
+			<setVariable label="set docId" name="docId" value="${Substring(veraSecureOuptut, 7, 36)}" version="2.0" />
+
+
+			<setVariable label="isSecureCLICallOK to true" name="isSecureCLICallOK" value="${true}" version="2.0" />
+
+
+			<setVariable label="set OSplatform to windows" name="OSplatform" value="windows" version="2.0" />
+
+
+			<print label="print doc ID" version="1.0">
+				<![CDATA[DOC ID parsed from Windows CLI: ${docId}]]>
+			</print>
+
+		</if>
+		<if label="if output contains docId: for Linux" condition="${Contains(veraSecureOuptut, &apos;docId:&apos;,false)}">
+
+			<setVariable label="set docId" name="docId" value="${Substring(veraSecureOuptut, 8, 36)}" version="2.0" />
+
+
+			<setVariable label="isSecureCLICallOK to true" name="isSecureCLICallOK" value="${true}" version="2.0" />
+
+
+			<setVariable label="set OSplatform to linux" name="OSplatform" value="linux" version="2.0" />
+
+
+			<print label="print doc ID" version="1.0">
+				<![CDATA[DOC ID parsed from Linux CLI: ${docId}]]>
+			</print>
+
+		</if>
+		<if label="if isSecureCLICallOK is false we have an error" condition="${isSecureCLICallOK==false}">
+
+			<print label="print error" version="1.0">
+				<![CDATA[No DocID found in vera exe output! Exit and quit]]>
+			</print>
+
+
+			<setVariable label="set the error" name="veraUtilityErrorMessage" value="Secure operation failed in VERA API" version="2.0" />
+
+
+			<exitProject label="Error exit" version="1.0" />
+
+		</if>
+		<if label="if we are on windows , we don&apos;t need the Linux parameter prefixes" condition="${OSplatform==&apos;windows&apos;}">
+
+			<setVariable label="set LinuxDocIDParameterPrefix to empty string" name="LinuxDocIDParameterPrefix" value="${&apos;&apos;}" version="2.0" />
+
+
+			<setVariable label="set LinuxOwnerParameterPrefix to empty string" name="LinuxOwnerParameterPrefix" value="${&apos;&apos;}" version="2.0" />
+
+		</if>
+
+		<print label="print next CLI execute command" version="1.0">
+			<![CDATA[execute: "${workingDir}${veraExe} change-owner ${LinuxDocIDParameterPrefix}${docId} ${Concat(LinuxOwnerParameterPrefix,veraOwnerEmail)}"]]>
+		</print>
+
+
+		<exec label="VERAD SDK change-owner" executable="${veraExe}" executableDir="${workingDir}" workingDir="${workingDir}" spawn="false" redirectOutputTo="file" outputFile="${Concat(workingDir, outputFileFromExe)}" whenFileExists="overwrite" errorIfExecutableFails="true" version="1.0">
+			<arg value="change-owner" />
+			<arg value="${Concat(LinuxDocIDParameterPrefix,docId)}" />
+			<arg value="${Concat(LinuxOwnerParameterPrefix,veraOwnerEmail)}" />
+			<envvar name="LD_LIBRARY_PATH" value="${workingDir}" />
+		</exec>
+
+
+		<setVariable label="read output File" name="veraSecureOuptut" inputFile="${Concat(workingDir, outputFileFromExe)}" version="2.0" />
+
+
+		<print label="print output" version="1.0">
+			<![CDATA[------------------------------------------------------
+${veraSecureOuptut}]]>
+		</print>
+
+		<if label="if output contains &apos;Change owner is successful&apos; we&apos;re in Windows" condition="${Contains(veraSecureOuptut, &apos;Change owner is successful&apos;,false)}">
+
+			<setVariable label="isSecureCLICallOK to true" name="isSecureCLICallOK" value="${true}" version="2.0" />
+
+
+			<print label="print change owner success" version="1.0">
+				<![CDATA[change owner was successful - Windows]]>
+			</print>
+
+		</if>
+		<if label="if output contains &apos;set owner =&apos; for Linux" condition="${Contains(veraSecureOuptut, &apos;set owner = &apos;,false)}">
+
+			<setVariable label="isSecureCLICallOK to true" name="isSecureCLICallOK" value="${true}" version="2.0" />
+
+
+			<print label="print change owner success" version="1.0">
+				<![CDATA[change owner was successful - Linux]]>
+			</print>
+
+		</if>
+		<if label="if isSecureCLICallOK is false we have an error" condition="${isSecureCLICallOK==false}">
+
+			<print label="print error" version="1.0">
+				<![CDATA[Change owner failed!!! Exit and quit]]>
+			</print>
+
+
+			<setVariable label="set the error" name="veraUtilityErrorMessage" value="Vera change-owner operation failed!" version="2.0" />
+
+
+			<exitProject label="Error exit" version="1.0" />
+
+		</if>
+		<if label="veraRecipientEmail is none - continue" condition="${veraRecipientEmail&lt;&gt; &apos;none&apos;}">
+
+			<print label="print execute line" version="1.0">
+				<![CDATA[execute: "${workingDir}${veraExe} grant-access ${targetFile} ${veraRecipientEmail} ${veraPolicyID}"]]>
+			</print>
+
+
+			<exec label="VERAD SDK grant-access" executable="${veraExe}" executableDir="${workingDir}" workingDir="${workingDir}" spawn="false" redirectOutputTo="file" outputFile="${Concat(workingDir, outputFileFromExe)}" whenFileExists="overwrite" errorIfExecutableFails="true" version="1.0">
+				<arg value="grant-access" />
+				<arg value="${targetFile}" />
+				<arg value="${veraRecipientEmail}" />
+				<arg value="${veraPolicyID}" />
+				<envvar name="LD_LIBRARY_PATH" value="${workingDir}" />
+			</exec>
+
+
+			<setVariable label="read output File" name="veraSecureOuptut" inputFile="${Concat(workingDir, outputFileFromExe)}" version="2.0" />
+
+
+			<print label="print output" version="1.0">
+				<![CDATA[------------------------------------------------------
+${veraSecureOuptut}]]>
+			</print>
+
+		</if>
+
+		<delete label="delete outputfile" file="${Concat(workingDir, outputFileFromExe)}" version="1.0" />
+
+	</module>
+
+
+	<module name="verifyInputParameters">
+		<if label="is workingDir correct?" condition="${DirectoryExists(workingDir)}">
+
+			<print label="print workingDir is correct" version="1.0">
+				<![CDATA[workingDir is correct]]>
+			</print>
+
+			<else>
+
+				<setVariable label="set the error" name="veraUtilityErrorMessage" value="workingDir &apos;${workingDir }&apos; does not exist or is not set correctly in VeraSecureUtilityLinuxWindows" version="2.0" />
+
+
+				<exitProject label="Exit error" version="1.0" />
+
+			</else>
+		</if>
+		<if label="is veraExe present?" condition="${FileExists(Concat(workingDir ,veraExe))}">
+
+			<print label="print veraExe is correct" version="1.0">
+				<![CDATA[veraExe is correct!]]>
+			</print>
+
+			<else>
+
+				<setVariable label="set the error" name="veraUtilityErrorMessage" value="veraExe &apos;${Concat(workingDir, veraExe )}&apos; is not set correctly in VeraSecureUtilityLinuxWindows" version="2.0" />
+
+
+				<exitProject label="Exit error" version="1.0" />
+
+			</else>
+		</if>
+		<if label="is conf.json present?" condition="${FileExists(Concat(workingDir ,&apos;conf.json&apos;))}">
+
+			<print label="print conf.json is present" version="1.0">
+				<![CDATA[conf.json is present]]>
+			</print>
+
+			<else>
+
+				<setVariable label="set the error" name="veraUtilityErrorMessage" value="&apos;${Concat(workingDir, &apos;conf.json&apos;)}&apos; is missing in VeraSecureUtilityLinuxWindows, please download conf.json from VERA portal" version="2.0" />
+
+
+				<exitProject label="Exit error" version="1.0" />
+
+			</else>
+		</if>
+		<if label="if veraOwnerEmail is valid email" condition="${IsValidText(veraOwnerEmail, &apos;^[a-zA-Z0-9_!#$%&amp;’*+/=?`{|}~^.-]+@[a-zA-Z0-9.-]+$&apos;)}">
+			<else>
+
+				<setVariable label="set the error" name="veraUtilityErrorMessage" value="Vera owner email is not in a correct format!" version="2.0" />
+
+
+				<exitProject label="Exit error" version="1.0" />
+
+			</else>
+
+			<print label="print veraOwnerEmail is valid email" version="1.0">
+				<![CDATA[veraOwnerEmail is valid email]]>
+			</print>
+
+		</if>
+		<if label="if veraRecipientEmail is none skip the next validation test" condition="${veraRecipientEmail&lt;&gt; &apos;none&apos;}">
+			<if label="if veraRecipientEmail is valid email" condition="${IsValidText(veraRecipientEmail , &apos;^[a-zA-Z0-9_!#$%&amp;’*+/=?`{|}~^.-]+@[a-zA-Z0-9.-]+$&apos;)}">
+				<else>
+					<if label="if veraRecipientEmail is none then continue" condition="${veraRecipientEmail &lt;&gt; &apos;none&apos;}" />
+
+					<setVariable label="set  the error" name="veraUtilityErrorMessage" value="Vera recipient email is not in a correct format!" version="2.0" />
+
+
+					<exitProject label="Exit error" version="1.0" />
+
+				</else>
+
+				<print label="print veraRecipientEmail is valid email" version="1.0">
+					<![CDATA[veraRecipientEmail is valid email]]>
+				</print>
+
+			</if>
+		</if>
+		<if label="if sourceFile exists" condition="${FileExists(sourceFile)}">
+			<else>
+
+				<setVariable label="set  the error" name="veraUtilityErrorMessage" value="Source file does not exist!" version="2.0" />
+
+
+				<exitProject label="Exit error" version="1.0" />
+
+			</else>
+
+			<print label="sourceFile exisits" version="1.0">
+				<![CDATA[sourceFile exisits!]]>
+			</print>
+
+		</if>
+	</module>
+
+
+	<module name="initializeVeraPolicies">
+
+		<setVariable label="outputFileFromExe" name="outputFileFromExe" value="${Concat(&apos;output&apos;,system.job.id,&apos;.txt&apos;)}" version="2.0" />
+
+
+		<exec label="VERAD SDK get-policies" executable="${veraExe}" executableDir="${workingDir}" workingDir="${workingDir}" spawn="false" redirectOutputTo="file" outputFile="${Concat(workingDir, outputFileFromExe)}" whenFileExists="overwrite" errorIfExecutableFails="true" version="1.0">
+			<arg value="get-policies" />
+			<envvar name="LD_LIBRARY_PATH" value="${workingDir}" />
+		</exec>
+
+
+		<setVariable label="read output File" name="veraSecureOuptut" inputFile="${Concat(workingDir, outputFileFromExe)}" version="2.0" />
+
+		<if label="if output contains -" condition="${Contains(veraSecureOuptut, &apos;-&apos;,false)}">
+
+			<setVariable label="set veraPolicies" name="veraPolicies" value="${veraSecureOuptut}" version="2.0" />
+
+			<else label=" else there is no -">
+
+				<print label="print error" version="1.0">
+					<![CDATA[No hyphen - found in veraPolicies ! Exit and quit]]>
+				</print>
+
+
+				<setVariable label="set  the error" name="veraUtilityErrorMessage" value="Could not load VERA Policies in VeraUtilityWindows" version="2.0" />
+
+
+				<exitProject label="Error exit" version="1.0" />
+
+			</else>
+		</if>
+	</module>
+
+
+	<module name="lookUpVERAPolicy" description="The Policy String looks like this: cabc1397-ff37-3488-abfb-114b7b0c13a6 Collaborate 94c48c4b-09d2-3007-b7fe-105794bc327a Full LockDown 569f8bc2-8669-353c-aa4e-ea105cd23bbf Track b36e9cb6-9bce-3adc-ae47-a36f80b3faff View Only 92475573-995f-380f-a95c-59c72b7a218c Wrap  This module takes a String in plain English and looks up the String ID for the given textual Permission">
+		<if label="if veraPolicies contains veraPermission" condition="${Contains(veraPolicies, veraPermission,false)}">
+
+			<setVariable label="set veraPolicyID" name="veraPolicyID" value="${Substring(veraPolicies, PositionOf(veraPolicies, veraPermission, 0,false)-37, WholeNumber(&apos;36&apos;))}" version="2.0" />
+
+			<else label="permission not found">
+
+				<print label="print error" version="1.0">
+					<![CDATA[permission '${veraPermission}' not found in veraPolicies '${veraPolicies}' Exit and quit]]>
+				</print>
+
+
+				<setVariable label="set the error" name="veraUtilityErrorMessage" value="permission &apos;${veraPermission}&apos; not found in veraPolicies &apos;${veraPolicies}&apos;  in VeraUtilityWindows" version="2.0" />
+
+
+				<exitProject label="Error exit" version="1.0" />
+
+			</else>
+		</if>
+	</module>
+
+	<description>Utility Project to secure files with VERA in GAMFT.
+By John Tkaczewski
+For Linux or Windows
+Params 
+- veraOwnerEmail - Owner of the file 
+- veraRecipientEmail - Recipient of the file  
+- veraPermission - Ex: Collaborate, Full LockDown, View Only
+- sourceFile - Absolute Path + filename to the file to be secured
+- targetFile - Absolute Path + filename to the new secured file 
+- workingDir - Path to unzipped VERA package must end with trailing slash
+- veraExe -file name of Vera exe ex: VeraSdkSample.exe</description>
+</project>

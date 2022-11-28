@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="VeraUnsecureFromMonitor" mainModule="Main" version="2.0" logLevel="verbose">
+	<variable name="files" value="*" description="FileList Variable passed from the Monitor" />
+	<variable name="targetPath" value="C:\vera\unsecured\" description="where do you wish to place the unsecured files? Must end with trailing slash. webdocs path for a user is a good option" />
+	<variable name="workingDir" value="c:\veragamft\" description="directory where the VeraExe and conf.json are located, must end with trailing slash, use / for Linux or \  for Windows in path. Default Windows: c:\veragamft\ Default Linux: /veragamft/" />
+	<variable name="veraUtilityErrorMessage" value="*" description="If there is an error, the utility project will return the error message in this variable" />
+	<variable name="pathForManualRun" value="C:\VERA\vera-pgp" description="if you want to run this project outside of a Monitor just to test. Set the path to the folder you wish to transfer for testing" />
+
+	<module name="Main">
+		<if label="manual run?" condition="${string(files) eq &apos;*&apos;}">
+
+			<createFileList fileListVariable="files" numFilesFoundVariable="numberOfFiles" version="1.0">
+				<fileset dir="${pathForManualRun}" />
+			</createFileList>
+
+		</if>
+		<if label="targetPath exists?" condition="${DirectoryExists(targetPath)}">
+
+			<print label="print tragetPath exists" version="1.0">
+				<![CDATA[tragetPath already exists]]>
+			</print>
+
+			<else>
+
+				<mkdir label="Make Target Directory" dir="${targetPath}" version="1.0" />
+
+			</else>
+		</if>
+		<forEachLoop itemsVariable="${files}" currentItemVariable="currentFile">
+
+			<print label="print file path" version="1.0">
+				<![CDATA[${currentFile}]]>
+			</print>
+
+
+			<setVariable label="set sourceFile" name="sourceFile" value="${currentFile}" version="2.0" />
+
+
+			<setVariable label="targetFileName" name="targetFileName" value="${Replace(FileInfo(sourceFile):name, &apos;.html&apos;, &apos;&apos;)}" version="2.0" />
+
+
+			<setVariable label="set targetFile" name="targetFile" value="${Concat(targetPath,targetFileName)}" version="2.0" />
+
+
+			<callProject label="Call VeraUnsecureUtilityLinuxWindows Project" project="/vera/VeraUnsecureUtilityLinuxWindows" runInSameJob="true" inheritUserVariables="true" returnUserVariables="true" mode="interactive" version="1.0">
+				<variable name="veraUtilityErrorMessage" value="*" />
+			</callProject>
+
+			<if label="do I have errors?" condition="${veraUtilityErrorMessage &lt;&gt; &apos;*&apos;}">
+
+				<raiseError label="raise error" version="1.0">
+					<message>Error during VeraUnsecureFromMonitorerror message: ${veraUtilityErrorMessage}</message>
+				</raiseError>
+
+
+				<exitProject label="Exit with error" version="1.0" />
+
+			</if>
+		</forEachLoop>
+	</module>
+
+	<description>Project that takes files from a Monitor, UNSECURES the files with VERA and and places the unsecured files in a new unsecured folder. By: John Tkaczewski</description>
+</project>

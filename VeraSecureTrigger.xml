@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<triggers class="com.linoma.dpa.commandcenter.codec.TriggerVOListCodec">
+	<trigger>
+		<description></description>
+		<stopProcessing>true</stopProcessing>
+		<eventTypeID>122</eventTypeID>
+		<domain>Default</domain>
+		<status>A</status>
+		<name>VeraSecureTrigger</name>
+		<service>0</service>
+		<action>
+			<xml>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; ?&gt;
+&lt;callLocalProject user=&quot;admin&quot; password=&quot;*1:bZ/v1FxTyN5Y3LwV41ttS+wgcbCf2O6lxP2y9kz9aHU=&quot; passwordIsEncrypted=&quot;true&quot; mode=&quot;interactive&quot; project=&quot;/vera/VeraSecureFromTrigger&quot;&gt;
+	&lt;variable name=&quot;filePath&quot; value=&quot;${event.physicalPath}&quot; /&gt;
+	&lt;variable name=&quot;veraOwnerEmail&quot; value=&quot;${event.user.email}&quot; /&gt;
+	&lt;variable name=&quot;veraRecipientEmail&quot; value=&quot;none&quot; /&gt;
+	&lt;variable name=&quot;veraPermission&quot; value=&quot;Full LockDown&quot; /&gt;
+&lt;/callLocalProject&gt;
+</xml>
+			<type>6</type>
+		</action>
+		<conditions />
+	</trigger>
+</triggers>

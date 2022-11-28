@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="VeraFromFormToSecureMail" mainModule="Main" version="2.0" logLevel="verbose">
+	<variable name="workingDir" value="/veragamft/" description="directory where VERA CLI utility and conf.json are located. Windows: c:\veragamft\ or Linux: /veragamft/  MUST END with trailing slash!" />
+	<variable name="veraUtilityErrorMessage" value="*" />
+
+	<module name="Main">
+
+		<mkdir label="make tempdir" dir="${Concat(workingDir, &apos;/&apos;,system.job.id)}" version="1.0" />
+
+
+		<setVariable label="set veraOwnerEmail" name="veraOwnerEmail" value="${form:user}" version="2.0" />
+
+
+		<sql label="lookup the sending user email" resourceId="local db" version="1.0">
+			<query outputVariable="veraOwnerQuery">
+				<statement>SELECT user_email FROM dpa_web_user WHERE lower(user_name) =lower(&apos;${veraOwnerEmail}&apos;)</statement>
+			</query>
+		</sql>
+
+
+		<setVariable label="set veraOwnerEmail" name="veraOwnerEmail" value="${veraOwnerQuery[1]}" version="1.0" />
+
+		<forEachLoop itemsVariable="${veraFormGroup}" currentItemVariable="fgroup">
+
+			<setVariable label="set veraRecipientEmail" name="veraRecipientEmail" value="${fgroup[&apos;veraRecipient&apos;]}" version="2.0" />
+
+
+			<setVariable label="set veraPermission" name="veraPermission" value="${fgroup[&apos;veraPermission&apos;]}" version="2.0" />
+
+
+			<print label="printForm info" version="1.0">
+				<![CDATA[veraPermission  :${veraPermission}
+veraRecipient    :${veraRecipientEmail}
+veraOwnerEmail:${veraOwnerEmail} ]]>
+			</print>
+
+			<forEachLoop itemsVariable="${files}" currentItemVariable="currentFile">
+
+				<print label="print file path" version="1.0">
+					<![CDATA[${currentFile}]]>
+				</print>
+
+
+				<copy label="copy secure file to unsecured folder" sourceFile="${currentFile}" destDir="${Concat(workingDir,&apos;/&apos;,system.job.id,&apos;/&apos;)}" whenFileExists="overwrite" destinationFilesVariable="pathToDecryptedFile" version="1.0" />
+
+
+				<setVariable label="set sourceFile" name="sourceFile" value="${pathToDecryptedFile}" version="2.0" />
+
+
+				<setVariable label="set targetFile" name="targetFile" value="${Concat(workingDir,&apos;/&apos;,system.job.id,&apos;/&apos;,FileInfo(sourceFile):name, &apos;.html&apos;)}" version="2.0" />
+
+
+				<callProject label="Call VeraSecureUtilityLinuxWindows project" project="/vera/VeraSecureUtilityLinuxWindows" runInSameJob="true" inheritUserVariables="true" returnUserVariables="true" mode="interactive" version="1.0" onError="call:reportErrorToForm">
+					<variable name="veraUtilityErrorMessage" value="*" />
+				</callProject>
+
+				<if label="do I have errors?" condition="${veraUtilityErrorMessage &lt;&gt; &apos;*&apos;}">
+
+					<delete label="Delete Job Dir" dir="${Concat(workingDir,system.job.id)}" version="1.0" />
+
+
+					<callModule label="call reportErrorToForm Module" module="reportErrorToForm" version="1.0" />
+
+				</if>
+
+				<delete label="Delete sourceFile" file="${sourceFile}" version="1.0" />
+
+			</forEachLoop>
+
+			<createFileList label="list all files to send via secure mail" fileListVariable="${filesToSend}" numFilesFoundVariable="numberOfFiles" version="1.0">
+				<fileset dir="${Concat(workingDir,&apos;/&apos;,system.job.id)}" />
+			</createFileList>
+
+
+			<ghttps resourceId="local demo" keyLocation="KeyVault" version="1.0">
+				<sendPackage label="send secure email to veraRecipientEmail" toAddress="${veraRecipientEmail}" subject="You received ${numberOfFiles} encrypted file(s) " sourceFilesVariable="${filesToSend}">
+					<message>
+						<![CDATA[User: ${form:user} sent you ${numberOfFiles} file(s). Please register with https://hsdemo.vera.com/ to view and access the file(s).
+Permission: ${veraPermission} 
+----------------------------------------------------------------------------------
+Message from user: ${customMessage}]]>
+					</message>
+				</sendPackage>
+			</ghttps>
+
+		</forEachLoop>
+
+		<delete label="Delete Job Dir" dir="${Concat(workingDir,system.job.id)}" version="1.0" />
+
+
+		<secureFormResponse label="report success" status="Successful" message="Package(s) Sent. Thank You!" version="1.0" />
+
+	</module>
+
+
+	<module name="reportErrorToForm">
+
+		<secureFormResponse label="report error" status="Error" message="Error! ${veraUtilityErrorMessage}" version="1.0" />
+
+
+		<exitProject version="1.0" />
+
+	</module>
+
+	<description>Project that is executed from secure form VeraFormToSecureEmail, it collects recipients, permissions and uploaded files. Wraps each file with the correct permission for the recipient and sends the secured file via secure email. This project uses VeraSecureUtilityLinuxWindowsUtility Project. By: John Tkaczewski</description>
+</project>

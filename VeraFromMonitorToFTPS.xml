@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="VeraFromMonitorToFTPS" mainModule="Main" version="2.0" logLevel="verbose">
+	<variable name="veraOwnerEmail" value="ownerOfFile@mycompany.com" description="set email of the owner of the file" />
+	<variable name="veraRecipientEmail" value="recipientOfFile@mycompany.com" description="set the recipient email of the file" />
+	<variable name="veraPermission" value="View Only" description="set permission: ex: Full LockDown, Track, View Only" />
+	<variable name="pathForManualRun" value="C:\VERA\vera-pgp" description="if you want to run this project outside of a Monitor just to test. Set the path to the folder you wish to transfer for testing" />
+	<variable name="targetPath" value="C:\\GoAnywhere\\userdata\\webdocs\\johntk\\veraPGP\\" description="where do you wish to place the secured files? webdocs path for a user is a good option" />
+	<variable name="workingDir" value="c:\veragamft\" description="directory where the VeraExe and conf.json are located, must end with trailing slash, use / for Linux or \ for Windows in path. Default Windows: c:\veragamft\ Default Linux: /veragamft/" />
+	<variable name="files" value="*" description="FileList Variable passed from the Monitor" />
+	<variable name="veraUtilityErrorMessage" value="*" description="If there is an error, the utility project will return the error message in this variable" />
+
+	<module name="Main">
+		<if label="manual run?" condition="${string(files) eq &apos;*&apos;}">
+
+			<createFileList fileListVariable="files" numFilesFoundVariable="numberOfFiles" version="1.0">
+				<fileset dir="${pathForManualRun}" />
+			</createFileList>
+
+		</if>
+		<forEachLoop itemsVariable="${files}" currentItemVariable="currentFile">
+
+			<print label="print file path" version="1.0">
+				<![CDATA[${currentFile}]]>
+			</print>
+
+
+			<setVariable label="set sourceFile" name="sourceFile" value="${currentFile}" version="2.0" />
+
+
+			<setVariable label="set targetFile" name="targetFile" value="${Concat(targetPath,FileInfo(sourceFile):name, &apos;.html&apos;)}" version="2.0" />
+
+
+			<callProject label="Call VeraSecureUtilityLinuxWindows Project" project="/vera/VeraSecureUtilityLinuxWindows" runInSameJob="true" inheritUserVariables="true" returnUserVariables="true" mode="interactive" version="1.0">
+				<variable name="veraUtilityErrorMessage" value="*" />
+			</callProject>
+
+			<if label="do I have errors?" condition="${veraUtilityErrorMessage &lt;&gt; &apos;*&apos;}">
+
+				<raiseError label="raise error" version="1.0">
+					<message>Error during VeraFromMonitorToFTPS  error message: ${veraUtilityErrorMessage}</message>
+				</raiseError>
+
+
+				<exitProject label="Exit with error" version="1.0" />
+
+			</if>
+
+			<ftps label="upload VERA encoded file to FTPS" resourceId="Partner-FTPS-server" keyLocation="KeyVault" version="1.0">
+				<put label="upload file to partner FTPS server" sourceFile="${targetFile}" destinationFile="${Concat(FileInfo(sourceFile):name, &apos;.html&apos;)}" />
+			</ftps>
+
+		</forEachLoop>
+	</module>
+
+	<description>Project that takes files from a Monitor, secures the files with VERA and uploads the files with FTPS. You must configure an FTPS resource Partner-FTPS-server to where you wish to upload the files. By: John Tkaczewski</description>
+</project>

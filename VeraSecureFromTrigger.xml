@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="VeraSecureFromTrigger" mainModule="Main" version="2.0" logLevel="verbose" threadSafe="true">
+	<variable name="veraOwnerEmail" value="ownerOfFile@mycompany.com" description="Owner of the VERA file" />
+	<variable name="veraRecipientEmail" value="recipientOfFile@mycompany.com" description="recipient of the VERA file, put &apos;none&apos; without the quote if you wish to secure the file but not set any recipients. File without recipient will be secured and everyone will be required to request access to the file" />
+	<variable name="veraPermission" value="Full Lockdown" description="Permissions will look like this, we just need the english representation of the permission, the script will look up the long ID automatically. EX: Collaborate, Full LockDown, Track, View Only" />
+	<variable name="workingDir" value="/veragamft/" description="directory where the VeraExe and conf.json are located, must end with trailing slash, use / for Linux or \ for Windows in path. Default Windows: c:\veragamft\ Default Linux: /veragamft/" />
+	<variable name="veraUtilityErrorMessage" value="*" description="this variable will contain the error message from the utility VERA project" />
+	<variable name="filePath" value="C:\VERA\vera-pgp\Secure customer list.xlsx" description="if you want to run this project manually outside of a trigger just to test, Set the path to the file you wish to process for testing. This path must include the file name" />
+
+	<module name="Main">
+
+		<print version="1.0">
+			<![CDATA[filePath   : ${filePath}
+veraOwnerEmail : ${veraOwnerEmail}
+veraRecipient : ${veraRecipientEmail}]]>
+		</print>
+
+
+		<setVariable label="sourceFile" name="sourceFile" value="${filePath}" version="2.0" />
+
+
+		<setVariable label="targetFile" name="targetFile" value="${Concat(sourceFile, &apos;.html&apos;)}" version="2.0" />
+
+
+		<callProject label="Call VeraSecureUtilityLinuxWindows Project" project="/vera/VeraSecureUtilityLinuxWindows" runInSameJob="true" inheritUserVariables="true" returnUserVariables="true" mode="interactive" version="1.0">
+			<variable name="veraUtilityErrorMessage" value="*" />
+		</callProject>
+
+		<if label="do I have errors?" condition="${veraUtilityErrorMessage &lt;&gt; &apos;*&apos;}">
+
+			<raiseError label="raise error" version="1.0">
+				<message>Error during VeraFromTrigger. Error message: ${veraUtilityErrorMessage}</message>
+			</raiseError>
+
+
+			<exitProject label="Exit with error" version="1.0" />
+
+		</if>
+
+		<delete label="delete sourceFile" file="${sourceFile}" version="1.0" />
+
+	</module>
+
+	<description>Example of how to call the VERA Utility project from a trigger. 
+Must set in the trigger: filePath to ${event.physicalPath},  veraRecipient, veraOwner. By: John Tkaczewski</description>
+</project>

@@ -1,0 +1,138 @@
+<project name="VeraUnsecureUtilityLinuxWindows" mainModule="Main" version="2.0" logLevel="verbose" onError="continue">
+	<variable name="sourceFile" value="/path/to/source/file.example" description="file to secure, full path + file name, use / for Linux or \ for Windows in path" />
+	<variable name="targetFile" value="/path/to/target/file.example" description="location where to place the secured file, full path + file name use / for Linux or \ for Windows in path" />
+	<variable name="workingDir" value="/veragamft" description="Directory where the Vera executable (i.e. VeraSdkSample.exe) and conf.json are located, must end with trailing slash, use / for Linux or \ for Windows in path" />
+	<variable name="veraExe" value="VeraSDKSample" description="executable to vera, default on Windows: VeraSdkSample.exe default on Linux: VeraSDKSample" />
+	<variable name="veraUtilityErrorMessage" value="error!" description="if during execution errors occur, the error message will be contained here" />
+
+	<module name="Main">
+
+		<callModule label="call verifyInputParameters" module="verifyInputParameters" version="1.0" />
+
+
+		<setVariable label="outputFileFromExe" name="outputFileFromExe" value="${Concat(&apos;output&apos;,system.job.id,&apos;.txt&apos;)}" version="2.0" />
+
+
+		<print label="print outputFileFromExe" version="1.0">
+			<![CDATA[Output will be saved in: ${outputFileFromExe}]]>
+		</print>
+
+
+		<exec label="VERA SDK unsecure" executable="${veraExe}" executableDir="${workingDir}" workingDir="${workingDir}" redirectOutputTo="file" outputFile="${Concat(workingDir, outputFileFromExe)}" whenFileExists="overwrite" errorIfExecutableFails="true" version="1.0">
+			<arg value="unsecure" />
+			<arg value="${sourceFile}" />
+			<arg value="${targetFile}" />
+			<envvar name="LD_LIBRARY_PATH" value="${workingDir}" />
+		</exec>
+
+
+		<setVariable label="read output File" name="veraSecureOuptut" inputFile="${Concat(workingDir, outputFileFromExe)}" version="2.0" />
+
+
+		<print label="print output" version="1.0">
+			<![CDATA[------------------------------------------------------
+${veraSecureOuptut}]]>
+		</print>
+
+		<if label="if output is empty" condition="${IsEmpty(veraSecureOuptut)}">
+
+			<print label="print unsecure operation success" version="1.0">
+				<![CDATA[unsecure operation success]]>
+			</print>
+
+			<else label="else unsecure operation failed">
+
+				<print label="print error" version="1.0">
+					<![CDATA[unsecure operation failed ${veraSecureOuptut}]]>
+				</print>
+
+
+				<setVariable label="set the error variable" name="veraUtilityErrorMessage" value="unsecure operation failed ${veraSecureOuptut}" version="2.0" />
+
+
+				<delete label="delete outputfile" file="${Concat(workingDir, outputFileFromExe)}" version="1.0" disabled="false" />
+
+
+				<exitProject label="Error exit" version="1.0" />
+
+			</else>
+		</if>
+
+		<delete label="delete outputfile" file="${Concat(workingDir, outputFileFromExe)}" version="1.0" disabled="false" />
+
+	</module>
+
+
+	<module name="verifyInputParameters">
+		<if label="is workingDir correct?" condition="${DirectoryExists(workingDir)}">
+
+			<print label="print workingDir is correct" version="1.0">
+				<![CDATA[workingDir is correct]]>
+			</print>
+
+			<else>
+
+				<setVariable label="set the error" name="veraUtilityErrorMessage" value="workingDir &apos;${workingDir }&apos; does not exist or is not set correctly in VeraUnsecureUtilityWindowsLinux" version="2.0" />
+
+
+				<exitProject label="Exit error" version="1.0" />
+
+			</else>
+		</if>
+		<if label="is veraExe present?" condition="${FileExists(Concat(workingDir, veraExe))}">
+
+			<print label="print veraExe is correct" version="1.0">
+				<![CDATA[veraExe exists!]]>
+			</print>
+
+			<else>
+
+				<setVariable label="set the error" name="veraUtilityErrorMessage" value="Executable veraExe &apos;${Concat(workingDir, veraExe)}&apos; not found or is not set correctly in VeraUnsecureUtilityWindowsLinux" version="2.0" />
+
+
+				<exitProject label="Exit error" version="1.0" />
+
+			</else>
+		</if>
+		<if label="is conf.json present?" condition="${FileExists(Concat(workingDir ,&apos;conf.json&apos;))}">
+
+			<print label="print conf.json is present" version="1.0">
+				<![CDATA[conf.json is present]]>
+			</print>
+
+			<else>
+
+				<setVariable label="set the error" name="veraUtilityErrorMessage" value="&apos;${Concat(workingDir, &apos;conf.json&apos;)}&apos; is missing in VeraUnsecureUtilityWindowsLinux, please download conf.json from VERA portal" version="2.0" />
+
+
+				<exitProject label="Exit error" version="1.0" />
+
+			</else>
+		</if>
+		<if label="if sourceFile exists" condition="${FileExists(sourceFile)}">
+			<else>
+
+				<setVariable label="set  the error" name="veraUtilityErrorMessage" value="Source file does not exist! in VeraUtilityJava" version="2.0" />
+
+
+				<exitProject label="Exit error" version="1.0" />
+
+			</else>
+
+			<print label="sourceFile exisits" version="1.0">
+				<![CDATA[sourceFile exisits!]]>
+			</print>
+
+		</if>
+	</module>
+
+	<description>Utility Project to UNSECURE files with VERA in GAMFT. 
+Linux and Windows
+By: John Tkaczewski
+Parameters: 
+- sourceFile - Absolute Path + filename to the file to be unsecured
+- targetFile - Absolute Path + filename to the new unsecured file 
+- workingDir - Path to unzipped VERA package must end with trailing slash
+- veraExe- executable to VERA CLI
+</description>
+</project>

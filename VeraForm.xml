@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<secureForm>
+<name>VeraForm</name>
+<description>Form that collects recipients, permissions and uploaded files. Calls VeraFromFormToSecureMail project to secure all the files and send the files via Secure Mail</description>
+<type>1</type>
+<domain>Default</domain>
+<title>Protect files and Email Using VERA</title>
+<instructions>Select Security Level Recipients and Files</instructions>
+<status>A</status>
+<publicAccess>false</publicAccess>
+<publicURL>VeraDemo</publicURL>
+<includeBranding>true</includeBranding>
+<redirectOnSuccess>false</redirectOnSuccess>
+<redirectOnSuccessURL/>
+<createdBy>admin</createdBy>
+<createdOn>1668094814000</createdOn>
+<modifiedBy>admin</modifiedBy>
+<modifiedOn>1669129687000</modifiedOn>
+<projectLocation>/vera/VeraFromFormToSecureMail</projectLocation>
+<runUser>admin</runUser>
+<userPassword>*1:bZ/v1FxTyN5Y3LwV41ttS+wgcbCf2O6lxP2y9kz9aHU=</userPassword>
+<jobName/>
+<componentSequence>38</componentSequence>
+<componentVersion>1</componentVersion>
+<webClientEnabled>true</webClientEnabled>
+<soapEnabled>false</soapEnabled>
+<restEnabled>false</restEnabled>
+<allowEmbedding>0</allowEmbedding>
+<allowEmbeddingFrom/>
+<webGroups/>
+<webUsers/>
+<projectVariables>
+<projectVariable name="veraUtilityErrorMessage" value="*"/>
+<projectVariable name="workingDir" value="/veragamft/"/>
+</projectVariables>
+<languages/>
+<components>
+<row id="1001-19">
+<column id="1001-20">
+<bulletlist fontSize="12" id="1001-21" listType="disc">
+<option description="Select Security Level and Recipients (max of 5) " label="" value=""/>
+<option description="Select File(s) To Send and protect (max 4 files, XML and HTML files can't be protected)" label="" value=""/>
+<option description="Enter short text message to all the recipients" label="" value=""/>
+<option description="Click submit. The secured files will be sent via email to the recipients" label="" value=""/>
+</bulletlist>
+</column>
+</row>
+<row id="1001-22">
+<column id="1001-23">
+<compGroup addLinkText="" id="1001-24" label="File Protection and Tracking" maxAllowed="5" minAllowed="1" repeatable="true" variableName="veraFormGroup">
+<row id="1001-25">
+<column id="1001-26">
+<dropdown addLinkText="" editable="false" id="1001-27" label="Security level:" maxAllowed="0" minAllowed="0" optionsSource="manual" repeatable="false" required="true" resource="1003" sqlArea="" variableName="veraPermission" widthPx="">
+<option description="Allow editing of file content" label="Collaborate" value="Collaborate"/>
+<option description="Allow view only access to file content and require authentication each time a file is accessed" label="Full Lockdown" value="Full Lockdown"/>
+<option description=" Keep secure but allow full access" label="Track" value="Track"/>
+<option defaultValue="true" description="Allow view only access to file content" label="View Only" value="View Only"/>
+<option description="Wrap" label="Wrap" value="Wrap"/>
+</dropdown>
+</column>
+</row>
+<row id="1001-28">
+<column id="1001-29">
+<textfield addLinkText="" autocomplete="true" defaultValue="" encryptData="false" id="1001-30" label="Recipient Email: " maskInput="false" maxAllowed="0" minAllowed="0" placeholder="" repeatable="false" required="true" showToolTip="mouseenter" tooltip="Type one email address" variableName="veraRecipient" width="50"/>
+</column>
+</row>
+</compGroup>
+</column>
+</row>
+<row id="1001-31">
+<column id="1001-32">
+<textarea addLinkText="" charsRemaining="" defaultValue="" id="1001-33" label="Message to all the recipients" maxAllowed="0" maxLength="1000" minAllowed="0" placeholder="" repeatable="false" required="true" rows="3" showToolTip="mouseenter" tooltip="Message to all recipients" variableName="customMessage" width="50"/>
+</column>
+</row>
+<row id="1001-34">
+<column id="1001-35">
+<file allowedFileTypes="" id="1001-36" label="Files to share: " maxFileCount="4" maxFileSize="100" maxFileSizeUnit="M" required="true" uploadLabel="" variableName="files"/>
+</column>
+</row>
+<formbutton cancelButton="" id="1001-37" position="top" saveButton="" submitButton=""/>
+</components>
+</secureForm>
